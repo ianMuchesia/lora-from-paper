@@ -1,0 +1,14 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+.vscode/
+*.egg-info/
+dist/
+build/
+.ipynb_checkpoints/
+*.pt
+*.pth
+*.bin
+data/
