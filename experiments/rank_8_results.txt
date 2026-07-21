@@ -1,0 +1,7 @@
+Frozen Params 128
+Trainable Params 1,872
+Total Params 2,000
+
+
+Final Training Loss 17.1013
+Final Accuracy Performance 37.50%

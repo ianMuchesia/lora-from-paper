@@ -28,9 +28,22 @@ The update `BA` is low-rank, meaning far fewer parameters to train. At `rank=8` 
 | :--- | :--- |
 | `src/lora_layer.py` | Core `LoRALayer` implementation |
 | `src/linear.py` | Vanilla `Linear` layer for comparison |
+| `src/small_model.py` | `ToyModel` — MLP + LoRALayer for experiments |
+| `src/train_small_model.py` | Training loop, rank sweep (r=4, 8, 16), result export |
 | `notebooks/paper_notes.ipynb` | Paper walkthrough and math experiments |
+| `experiments/` | Rank comparison results (`rank_4`, `rank_8`, `rank_16`) |
 | `math-notes/` | Derivations and memory analysis |
-| `experiments/` | Comparison runs (to be added) |
+
+---
+
+## Experiments: Rank Sweep
+Trained `ToyModel` (20→64→2) with LoRA at different ranks across 10 epochs. Results saved in `experiments/`:
+
+- `rank_4_results.txt` — fewest trainable params, simplest adapter
+- `rank_8_results.txt` — balanced
+- `rank_16_results.txt` — most expressive adapter
+
+Each file logs frozen vs trainable parameter counts, final loss, and accuracy.
 
 ---
 
@@ -38,10 +51,11 @@ The update `BA` is low-rank, meaning far fewer parameters to train. At `rank=8` 
 
 ```bash
 python -m venv venv && source venv/bin/activate
-pip install -r requirements.in
+pip install torch
+python src/train_small_model.py
 ```
 
 ---
 
 ## Study Notes
-See [NOTES.md](NOTES.md) for conceptual breakdowns of the math and implementation decisions.
+See [NOTES.md](NOTES.md) for conceptual breakdowns of the math, the memory efficiency trick, and implementation decisions.
