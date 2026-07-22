@@ -3,14 +3,15 @@ import torch
 import torch.nn as nn
 
 
-class LoRALayer(nn.Module):
-    def __init__(self,in_features,out_features,rank):
+class LoRAGPTLayer(nn.Module):
+    def __init__(self,in_features,out_features,original_weight,orignial_bias,rank):
         super().__init__()
         
-        self.W = nn.Parameter(torch.randn(in_features,out_features))
+        self.W = original_weight
         self.W.requires_grad = False
         
-        self.bias = nn.Parameter(torch.zeros(out_features))
+        # self.bias = nn.Parameter(torch.zeros(out_features))
+        self.bias = orignial_bias
         
         self.A = nn.Parameter(torch.randn(rank,out_features))
         

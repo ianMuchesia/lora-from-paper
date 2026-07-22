@@ -26,13 +26,16 @@ The update `BA` is low-rank, meaning far fewer parameters to train. At `rank=8` 
 
 | Path | Contents |
 | :--- | :--- |
-| `src/lora_layer.py` | Core `LoRALayer` implementation |
+| `src/lora_layer.py` | Core `LoRALayer` — toy implementation |
 | `src/linear.py` | Vanilla `Linear` layer for comparison |
-| `src/small_model.py` | `ToyModel` — MLP + LoRALayer for experiments |
+| `src/lora_gpt_layer.py` | `LoRAGPTLayer` — handles GPT-2's `Conv1D` quirk, includes merge/unmerge |
+| `src/lora_transformer.py` | `inject_lora()` — injects LoRA into real GPT-2 attention layers |
+| `src/small_model.py` | `ToyModel` — MLP + LoRALayer for rank sweep experiments |
 | `src/train_small_model.py` | Training loop, rank sweep (r=4, 8, 16), result export |
+| `utils/` | Helper utilities |
 | `notebooks/paper_notes.ipynb` | Paper walkthrough and math experiments |
-| `experiments/` | Rank comparison results (`rank_4`, `rank_8`, `rank_16`) |
-| `math-notes/` | Derivations and memory analysis |
+| `math-notes/` | Derivations, memory analysis, low-rank factorization notes |
+| `experiments/` | Rank sweep results |
 
 ---
 
@@ -51,8 +54,13 @@ Each file logs frozen vs trainable parameter counts, final loss, and accuracy.
 
 ```bash
 python -m venv venv && source venv/bin/activate
-pip install torch
+pip install torch transformers
+
+# Run toy rank sweep
 python src/train_small_model.py
+
+# Inject LoRA into real GPT-2
+python src/lora_transformer.py
 ```
 
 ---

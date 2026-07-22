@@ -73,3 +73,47 @@ CrossEntropyLoss does not work like regression (where you predict a number and c
 - Regression → model predicts a number, target is a number, loss is the difference.
 - Classification → model predicts scores per class, target is just the correct index, loss checks if the right index got the highest score.
 
+
+
+
+## 7. Navigating Model Modules — Parent vs Child
+When you call `model.named_modules()`, PyTorch returns names as dot-separated paths, like folder paths on a computer. For example `transformer.h.0.attn.c_attn`:
+- `transformer.h.0.attn` is the path to the parent module
+- `c_attn` is the specific child layer you want to replace
+
+To split this reliably:
+```python
+child = name.split(".")[-1]        # last segment = the layer to replace
+parent = ".".join(name.split(".")[:-1])  # everything before = path to parent
+parent_module = model.get_submodule(parent)
+setattr(parent_module, child, new_layer)  # swap the layer in-place
+```
+This works for any model — LLaMA, BERT, GPT-2. The dot path is a PyTorch standard, not Hugging Face-specific.
+
+## 8. GPT-2's Conv1D Quirk
+GPT-2 uses a custom `Conv1D` class instead of `nn.Linear`. They are mathematically identical — `Conv1D` on a sequence does the same computation as a linear layer. Hugging Face kept it because they directly ported OpenAI's original 2019 code.
+
+The dimension naming is reversed from `nn.Linear`:
+- `Conv1D(nf=2304, nx=768)` → `nx` is input (768 = GPT-2 hidden dim), `nf` is output (2304 = 768 × 3 for Q, K, V projections)
+
+When writing `LoRAGPTLayer`, use `module.nx` as `in_features` and `module.nf` as `out_features`.
+
+## 9. Hugging Face Model Caching
+When you call `AutoModelForCausalLM.from_pretrained("gpt2")`, Hugging Face downloads and caches the model automatically:
+- **Linux/macOS:** `~/.cache/huggingface/hub/`
+- **Windows:** `C:\Users\<username>\.cache\huggingface\hub\`
+
+GPT-2 base: ~500MB on disk (124M parameters), ~1GB in RAM when loaded. Don't download manually from the web UI — the Python call handles all files (config, weights, tokenizer) in one shot and verifies integrity.
+
+## 10. Weight Merging — LoRA at Inference Time
+During training: `y = xW + (x @ B) @ A` — two separate computations.
+
+At inference, you can merge the adapter back into the original weight to remove the overhead:
+```python
+def merge_weights(self):
+    with torch.no_grad():
+        self.W += (self.B @ self.A)  # bake the update into W permanently
+        self.merged = True
+```
+After merging: `y = xW` — same result, one computation, no extra memory. You can also `unmerge_weights()` to restore the original `W` by subtracting `B @ A`. This is how production LoRA deployments work — train with adapters, merge before serving.
+
