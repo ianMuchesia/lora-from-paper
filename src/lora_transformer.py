@@ -1,16 +1,15 @@
 import torch
 import torch.nn as nn
 
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM,PreTrainedModel
 from src.lora_gpt_layer import LoRAGPTLayer
 
 
-def inject_lora(model):
-    child = ""
-    parent = ""
-    for name, module in model.named_modules():
+def inject_lora(model)->PreTrainedModel:
+    modules_list = list(model.named_modules())
+    for name, module in modules_list:
         if(name.endswith("c_attn")):
-            print(f"This is the name: {name}, this is the module: {module}")
+            #print(f"This is the name: {name}, this is the module: {module}")
             
             child = name.split(".")[-1]
             parent = ".".join(name.split(".")[:-1])
@@ -22,18 +21,20 @@ def inject_lora(model):
             setattr(parent_module,child,loralayer)
             
          
-    trainable_params = 0
-    frozen_params = 0
+    # trainable_params = 0
+    # frozen_params = 0
             
-    for p in model.parameters():
-        if p.requires_grad:
-            trainable_params += p.numel()
-        else:
-            frozen_params += p.numel()
+    # for p in model.parameters():
+    #     if p.requires_grad:
+    #         trainable_params += p.numel()
+    #     else:
+    #         frozen_params += p.numel()
             
-    print(f"Trainable Parameters (LoRA): {trainable_params:,}")
-    print(f"Frozen Parameters: {frozen_params:,}")
-    print(f"Total Parameters: {trainable_params + frozen_params:,}")
+    # print(f"Trainable Parameters (LoRA): {trainable_params:,}")
+    # print(f"Frozen Parameters: {frozen_params:,}")
+    # print(f"Total Parameters: {trainable_params + frozen_params:,}")
+    
+    return model
             
            
         
