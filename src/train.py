@@ -25,7 +25,7 @@ def fine_tune_gpt2(use_lora: bool):
     optimizer = optim.Adam(trainable_params, lr=0.001)
     
     # Get Data
-    train_dataloader, val_dataloader = get_dataloaders(
+    train_dataloader, val_dataloader,tokenizer = get_dataloaders(
         data_path="./experiments/training_data.jsonl", 
         batch_size=1
     )
@@ -38,7 +38,7 @@ def fine_tune_gpt2(use_lora: bool):
     # ==========================================
     
     epochs = 3
-    best_val_loss  = 0
+    best_val_loss  = float("inf")
     early_stop_patience = 5
     
     history = []
@@ -74,10 +74,13 @@ def fine_tune_gpt2(use_lora: bool):
                     )
             
             
-            print(f"this is the shape of the output {outputs.shape}")
             
             
             loss = outputs.loss
+            
+            #The predictions are in outputs.logits
+            logits = outputs.logits
+            
             
             loss.backward()
             
@@ -86,18 +89,33 @@ def fine_tune_gpt2(use_lora: bool):
             
             training_loss += loss.item()
             
-            _,indices = torch.max(outputs.data,2)
+            # Shift logits and labels so prediction t matches label t+1
+            shift_logits = logits[...,:-1,:].contiguous()
+            shift_labels = labels[..., 1:].contiguous()
             
-            correct_guesses = (indices == labels)
+            
+            # Get the highest probability token
+            _, indices = torch.max(shift_logits, 2)
+            
+            ignore_mask = (shift_labels != -100)
+            
+            
+            # Check which guesses were correct AND were not padding tokens
+            correct_guesses = (indices == shift_labels) & ignore_mask
+            
             
             correct += correct_guesses.sum().item()
             
             
             
             
+            # Only count actual valid tokens towards the total
+            print(ignore_mask.shape)
+            total += ignore_mask.sum().item()
+            
             total_steps += 1
-            total += labels.numel()
-            print(f"this is the loss {loss.item()}")
+            print(f"Loss: {loss.item():.4f}")
+            print(f"steps taken: {total_steps}")
             
             
         end_time = time.time()
@@ -153,23 +171,38 @@ def fine_tune_gpt2(use_lora: bool):
                             
                 
                 
+                #The predictions are in outputs.logits
+                logits = outputs.logits
                 
                 
+                running_loss += loss.item()
                 
-                training_loss += loss.item()
+              
+                # Shift logits and labels so prediction t matches label t+1
+                shift_logits = logits[...,:-1,:].contiguous()
+                shift_labels = labels[..., 1:].contiguous()
                 
-                _,indices = torch.max(outputs.data,2)
                 
-                correct_guesses = (indices == labels)
+                # Get the highest probability token
+                _, indices = torch.max(shift_logits, 2)
+                
+                ignore_mask = (shift_labels != -100)
+                
+                
+                # Check which guesses were correct AND were not padding tokens
+                correct_guesses = (indices == shift_labels) & ignore_mask
+                
                 
                 correct += correct_guesses.sum().item()
                 
                 
                 
                 
+                # Only count actual valid tokens towards the total
+                total += ignore_mask.sum().item()
+                
                 total_steps += 1
-                total += labels.numel()
-                print(f"this is the loss {loss.item()}")
+                print(f"Loss: {loss.item():.4f}")
                 
             end_time = time.time()
         
@@ -187,7 +220,7 @@ def fine_tune_gpt2(use_lora: bool):
         print(f"this is the total steps: {total_steps}")
         print(f"this is the total expected labels: {total}")
         print(f"this is the total len of validation dataloader: {len(val_dataloader)}")
-        print(f"this is the total running loss: {training_loss}")
+        print(f"this is the total running loss: {running_loss}")
         print(f"this is the average validation loss: {average_validation_loss}")
         print(f"this is the average validation accuracy: {validation_accuracy}")
         print(f"\n")

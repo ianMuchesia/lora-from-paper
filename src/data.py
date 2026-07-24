@@ -60,4 +60,4 @@ def get_dataloaders(data_path="./experiments/training_data.jsonl", batch_size=4)
         collate_fn=data_collator
     )
 
-    return train_dataloader, val_dataloader
+    return train_dataloader, val_dataloader,tokenizer
