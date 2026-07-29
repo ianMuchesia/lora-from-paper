@@ -5,7 +5,7 @@ from transformers import AutoModelForCausalLM,PreTrainedModel
 from src.lora_gpt_layer import LoRAGPTLayer
 
 
-def inject_lora(model)->PreTrainedModel:
+def inject_lora(model,rank,alpha)->PreTrainedModel:
     modules_list = list(model.named_modules())
     for name, module in modules_list:
         if(name.endswith("c_attn")):
@@ -14,29 +14,36 @@ def inject_lora(model)->PreTrainedModel:
             child = name.split(".")[-1]
             parent = ".".join(name.split(".")[:-1])
             
-            loralayer = LoRAGPTLayer(module.nx,module.nf,module.weight,module.bias,8)
+            loralayer = LoRAGPTLayer(module.nx,module.nf,module.weight,module.bias,8,alpha)
             
             parent_module = model.get_submodule(parent)
             
             setattr(parent_module,child,loralayer)
             
-         
-    # trainable_params = 0
-    # frozen_params = 0
-            
-    # for p in model.parameters():
-    #     if p.requires_grad:
-    #         trainable_params += p.numel()
-    #     else:
-    #         frozen_params += p.numel()
-            
-    # print(f"Trainable Parameters (LoRA): {trainable_params:,}")
-    # print(f"Frozen Parameters: {frozen_params:,}")
-    # print(f"Total Parameters: {trainable_params + frozen_params:,}")
-    
     return model
             
-           
+            
+def load_lora_model(model_name, rank,alpha, checkpoint_path, device):
+
+    # Step 1: rebuild the same LoRA structure used during training
+    base_model = AutoModelForCausalLM.from_pretrained(model_name)
+    model = inject_lora(base_model, rank=rank,alpha=alpha)   # your existing function, unchanged
+    model.to(device)
+
+    # Step 2: load only the saved A/B weights into that structure
+    lora_state_dict = torch.load(checkpoint_path, map_location=device)
+    model.load_state_dict(lora_state_dict, strict=False)
+
+    return model
+            
+            
+def count_trainable_params(model):
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total = sum(p.numel() for p in model.parameters())
+    return trainable, total
+    
+         
+    
         
         
         
@@ -58,4 +65,4 @@ if __name__ == "__main__":
   
     
     print("Inspecting layers...")
-    inject_lora(gpt2_model)
+    inject_lora(gpt2_model,rank=4,alpha=None)

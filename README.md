@@ -28,25 +28,28 @@ The update `BA` is low-rank, meaning far fewer parameters to train. At `rank=8` 
 | :--- | :--- |
 | `src/lora_layer.py` | Core `LoRALayer` — toy implementation |
 | `src/linear.py` | Vanilla `Linear` layer for comparison |
-| `src/lora_gpt_layer.py` | `LoRAGPTLayer` — handles GPT-2's `Conv1D` quirk, includes merge/unmerge |
+| `src/lora_gpt_layer.py` | `LoRAGPTLayer` — handles GPT-2's `Conv1D`, includes merge/unmerge |
 | `src/lora_transformer.py` | `inject_lora()` — injects LoRA into real GPT-2 attention layers |
-| `src/small_model.py` | `ToyModel` — MLP + LoRALayer for rank sweep experiments |
-| `src/train_small_model.py` | Training loop, rank sweep (r=4, 8, 16), result export |
-| `utils/` | Helper utilities |
-| `notebooks/paper_notes.ipynb` | Paper walkthrough and math experiments |
-| `math-notes/` | Derivations, memory analysis, low-rank factorization notes |
-| `experiments/` | Rank sweep results |
+| `src/train.py` | Full training loop on Alpaca dataset |
+| `src/data.py` | Data loader and preprocessing |
+| `src/format_prompt.py` | Prompt formatter for instruction-tuning format |
+| `src/pre_tuned_gpt.py` | Baseline GPT-2 generation before fine-tuning |
+| `src/post_tuned_gpt.py` | GPT-2 generation after LoRA fine-tuning |
+| `src/compare_results.py` | Side-by-side baseline vs LoRA output comparison |
+| `src/small_model.py` | `ToyModel` — MLP + LoRALayer for rank sweep |
+| `src/train_small_model.py` | Rank sweep training (r=4, 8, 16) |
+| `utils/` | Helper utilities (dataset downloader etc.) |
+| `notebooks/paper_notes.ipynb` | Paper walkthrough and math |
+| `math-notes/` | Derivations, FLOP/memory analysis |
+| `experiments/` | Results, rank analysis, LoRA vs full fine-tuning reports |
 
 ---
 
-## Experiments: Rank Sweep
-Trained `ToyModel` (20→64→2) with LoRA at different ranks across 10 epochs. Results saved in `experiments/`:
-
-- `rank_4_results.txt` — fewest trainable params, simplest adapter
-- `rank_8_results.txt` — balanced
-- `rank_16_results.txt` — most expressive adapter
-
-Each file logs frozen vs trainable parameter counts, final loss, and accuracy.
+## Experiments
+- **Rank sweep** (toy model, r=4/8/16): confirms rank directly controls trainable param count; frozen backbone unchanged.
+- **LoRA vs Full Fine-tuning on GPT-2** (`experiments/lora_vs_full_finetuning.md`): accuracy plateaued at ~54.6% across ranks — confirms low intrinsic dimension hypothesis from the paper.
+- **Rank analysis** (`experiments/lora_rank_analysis.md`): parameter compression math — at `d=768, r=8` → 48× fewer trainable params than full fine-tuning.
+- **Memory paradox:** LoRA showed *higher* peak GPU memory than full fine-tuning in experiments. LoRA doesn't skip the forward pass — it adds extra activation tensors (`x @ B @ A`). The optimizer memory saving is real, but activation memory can be higher.
 
 ---
 
@@ -54,16 +57,23 @@ Each file logs frozen vs trainable parameter counts, final loss, and accuracy.
 
 ```bash
 python -m venv venv && source venv/bin/activate
-pip install torch transformers
+pip install torch transformers datasets
 
-# Run toy rank sweep
+# Toy rank sweep
 python src/train_small_model.py
 
-# Inject LoRA into real GPT-2
-python src/lora_transformer.py
+# Full LoRA fine-tuning on Alpaca
+python src/train.py
+
+# Compare baseline vs fine-tuned output
+python src/compare_results.py
 ```
 
 ---
 
 ## Study Notes
 See [NOTES.md](NOTES.md) for conceptual breakdowns of the math, the memory efficiency trick, and implementation decisions.
+
+
+
+

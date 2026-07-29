@@ -1,0 +1,10 @@
+experiment_name: rank_16
+use_lora: true
+rank: 16
+alpha: 8
+lr: 0.001
+epochs: 10
+batch_size: 8
+num_examples: 3000
+data_path: /content/drive/MyDrive/fine-tuning/experiments/data/training_data.jsonl
+output_dir: /content/drive/MyDrive/fine-tuning/experiments
