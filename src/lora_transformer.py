@@ -14,7 +14,7 @@ def inject_lora(model,rank,alpha)->PreTrainedModel:
             child = name.split(".")[-1]
             parent = ".".join(name.split(".")[:-1])
             
-            loralayer = LoRAGPTLayer(module.nx,module.nf,module.weight,module.bias,8,alpha)
+            loralayer = LoRAGPTLayer(module.nx,module.nf,module.weight,module.bias,rank,alpha)
             
             parent_module = model.get_submodule(parent)
             

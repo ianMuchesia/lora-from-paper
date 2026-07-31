@@ -6,3 +6,5 @@ batch_size: 3
 num_examples: 3000
 data_path: /content/drive/MyDrive/fine-tuning/experiments/data/training_data.jsonl
 output_dir: /content/drive/MyDrive/fine-tuning/experiments
+checkpoint_path: ./experiments/results/full_finetune_best_model.pt
+

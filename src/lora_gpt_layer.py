@@ -16,6 +16,7 @@ class LoRAGPTLayer(nn.Module):
             self.bias.requires_grad = False
             
             
+        self.rank = rank
         self.alpha = alpha if alpha is not None else rank
         self.scaling = self.alpha / self.rank
         
